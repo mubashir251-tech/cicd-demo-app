@@ -1,0 +1,78 @@
+name: CI/CD Pipeline
+
+# Trigger the workflow on push to main branch and pull requests
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+# Define jobs to run
+jobs:
+  # Job 1: Run tests
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Checkout the code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Set up Node.js environment
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    # Step 3: Install dependencies (if any)
+    - name: Install dependencies
+      run: npm install --only=dev || echo "No dependencies to install"
+    
+    # Step 4: Run linting
+    - name: Run linting
+      run: npm run lint
+    
+    # Step 5: Run tests
+    - name: Run tests
+      run: npm test
+    
+    # Step 6: Upload test results
+    - name: Upload test results
+      if: always()
+      run: echo "Tests completed"
+
+  # Job 2: Deploy to GitHub Pages (only on main branch)
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write
+      id-token: write
+    
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    # Step 1: Checkout the code
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Step 2: Setup Pages
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+    
+    # Step 3: Upload artifact
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: './src'
+    
+    # Step 4: Deploy to GitHub Pages
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
